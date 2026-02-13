@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"encoding/json"
@@ -14,15 +15,16 @@ type Config struct {
 	CurrentUserName string `json:"current_user_name"`
 }
 
-func (c Config) SetUser(user string) {
+func (c Config) SetUser(user string) error {
 	c.CurrentUserName = user
 	err := write(c)
 	if err != nil {
-		fmt.Printf("Error setting 'user' in config file: %v\n", err)
+		return fmt.Errorf("Error setting 'user' in config file: %w", err)
 	}
+	return nil
 }
 
-func Read() Config {
+func Read() (Config, error) {
 	home, err := getConfigFilePath()
 	if err != nil {
 		fmt.Printf("Error opening config: %v\n", err)
@@ -31,18 +33,17 @@ func Read() Config {
 	file, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println("Config file does not exist.")
+			return Config{}, errors.New("Config file does not exist.")
 		} else {
-			fmt.Printf("Error opening file: %v\n", err)
+			return Config{}, fmt.Errorf("Error opening file: %v\n", err)
 		}
-		return Config{}
 	}
 	var cfgFile Config
 	err = json.Unmarshal(file, &cfgFile)
 	if err != nil {
-		fmt.Printf("Error parsing JSON: %v\n", err)
+		return Config{}, fmt.Errorf("Error parsing JSON: %v\n", err)
 	}
-	return cfgFile
+	return cfgFile, nil
 }
 
 func getConfigFilePath() (string, error) {

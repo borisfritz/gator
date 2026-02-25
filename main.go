@@ -1,22 +1,23 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"os"
+
 	"github.com/borisfritz/gator/internal/config"
+	"github.com/borisfritz/gator/internal/database"
+	_ "github.com/lib/pq"
 )
 
-// State struct to save the state of the program.
-//
-// cfg holds a pointer to a Config struct (internal/config) which 
-// is read from the file located at $HOME/.gatorconfig.json
 type state struct {
+	db  *database.Queries
 	cfg *config.Config
 }
 
 func main() {
 	// Initilize Program by reading config file, setting programState,
-	// programCommands and registering commands.
+	// and registering program commands.
 	programConfig, err := config.Read()
 	if err != nil {
 		log.Fatalf("Error reading config: %v", err)
@@ -24,10 +25,15 @@ func main() {
 	programState := state{
 		cfg: &programConfig,
 	}
-	programCommands := commands{
-		make(map[string]func(*state,command)error),
+	programCommands := getProgramCommands()
+
+	// LOAD Database
+	db, err := sql.Open("postgres", programConfig.DBURL)
+	if err != nil {
+		log.Fatalf("Unable to connect to DataBase: %v", err)
 	}
-	programCommands.register("login", handlerLogin)
+	dbQueries := database.New(db)
+	programState.db = dbQueries
 	
 	// Capture command from user
 	if len(os.Args) < 2 {

@@ -26,3 +26,17 @@ func (c *commands) run(s *state, cmd command) error {
 	}
 	return handler(s, cmd)
 }
+
+func getProgramCommands() commands {
+	programCommands := commands{
+		make(map[string]func(*state,command)error),
+	}
+	programCommands.register("login", handlerLogin)
+	programCommands.register("register", handlerRegister)
+	programCommands.register("reset", handlerReset)
+	programCommands.register("users", handlerUsers)
+	programCommands.register("agg", handlerAgg)
+	programCommands.register("addfeed", handlerAddFeed)
+	programCommands.register("feeds", handlerFeeds)
+	return programCommands
+}

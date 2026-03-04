@@ -27,7 +27,7 @@ func (c *commands) run(s *state, cmd command) error {
 	return handler(s, cmd)
 }
 
-// helper function to extract programCommands from main.go
+// helper function to register commands.
 func getProgramCommands() commands {
 	programCommands := commands{
 		make(map[string]func(*state,command)error),
@@ -41,5 +41,6 @@ func getProgramCommands() commands {
 	programCommands.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	programCommands.register("follow", middlewareLoggedIn(handlerFollow))
 	programCommands.register("following", middlewareLoggedIn(handlerFollowing))
+	programCommands.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 	return programCommands
 }

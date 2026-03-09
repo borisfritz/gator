@@ -42,5 +42,6 @@ func getProgramCommands() commands {
 	programCommands.register("follow", middlewareLoggedIn(handlerFollow))
 	programCommands.register("following", middlewareLoggedIn(handlerFollowing))
 	programCommands.register("unfollow", middlewareLoggedIn(handlerUnfollow))
+	programCommands.register("browse", middlewareLoggedIn(handlerBrowse))
 	return programCommands
 }

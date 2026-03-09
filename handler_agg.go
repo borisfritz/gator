@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"strings"
+	"database/sql"
 
 	"github.com/borisfritz/gator/internal/database"
+	"github.com/google/uuid"
 )
 
 func handlerAgg(s *state, cmd command) error {
@@ -37,16 +40,44 @@ func scrapeFeeds(s *state) {
 func scrapeFeed(db *database.Queries, feed database.Feed) {
 	_, err := db.MarkFeedFetched(context.Background(), feed.ID)
 	if err != nil {
-		log.Println("Failed to mark feed '%v' as fetched: %v\n", feed.Name, err)
+		log.Printf("Failed to mark feed '%v' as fetched: %v\n", feed.Name, err)
 		return
 	}
 	feedData, err := fetchFeed(context.Background(), feed.Url)
 	if err != nil {
-		log.Println("Failed to fetch feed '%v': %v\n", feed.Name, err)
+		log.Printf("Failed to fetch feed '%v': %v\n", feed.Name, err)
 		return
 	}
 	for _, item := range feedData.Channel.Item {
-		fmt.Printf("Found Post: %v\n", item.Title)
+		// Check if description and publish-date exist and set value
+		description := sql.NullString{
+			String: item.Description,
+			Valid: item.Description != "",
+		}
+		publishedAt := sql.NullTime{
+			Valid: false,
+		}
+		if t, err := time.Parse(time.RFC1123Z, item.PubDate); err == nil {
+			publishedAt.Time = t
+			publishedAt.Valid = true
+		}
+
+		// Create post
+		_, err := db.CreatePost(context.Background(), database.CreatePostParams{
+			ID: uuid.New(),
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
+			Title: item.Title,
+			Url: item.Link,
+			Description: description,
+			PublishedAt: publishedAt,
+			FeedID: feed.ID,
+		})
+		if err != nil {
+			if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+				continue
+			}
+			log.Printf("Failed to create post '%v': %v", item.Title, err)
+		}
 	}
-	log.Printf("Feed '%v' collected, %v posts found.", feed.Name, len(feedData.Channel.Item))
 }
